@@ -31,6 +31,13 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+
+        row = layout.row(align=True)
+        row.prop(scene, "flattener_mesh_collection")
+        row = layout.row(align=True)
+        row.prop(scene, "flattener_gp_object")
+        row = layout.row(align=True)
+        row.prop(scene, "flattener_gp_line_art")
         row = layout.row(align=True)
         row.operator('gp.get_visible_points')
 
@@ -43,6 +50,15 @@ def register():
     for cl in classes:  
         bpy.utils.register_class(cl)
 
+    
+    bpy.types.Scene.flattener_mesh_collection = bpy.props.PointerProperty(type=bpy.types.Collection, name="Mesh Collection")
+    bpy.types.Scene.flattener_gp_object = bpy.props.PointerProperty(type=bpy.types.Object, name="Grease Pencil Object")
+    bpy.types.Scene.flattener_gp_line_art = bpy.props.PointerProperty(type=bpy.types.Object, name="Line Art Object")
+
 def unregister():
     for cl in reversed(classes):
         bpy.utils.unregister_class(cl)
+
+    del bpy.types.Scene.flattener_gp_object
+    del bpy.types.Scene.flattener_mesh_collection
+    del bpy.types.Scene.flattener_gp_line_art
