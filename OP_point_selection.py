@@ -35,7 +35,7 @@ def delete_non_visible_points(context, gp_obj):
                     else:
                         #ce point a été intercepté par un objet quelconque, on doit le faire disparaitre    
                         point.select = True
-            print(f"Layer {layer} - Frame {frame.frame_number}")
+            # print(f"Layer {layer} - Frame {frame.frame_number}")
             #We delete the selected points  
             bpy.ops.gpencil.delete(type='POINTS')
     bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
@@ -72,48 +72,67 @@ class GP_OT_get_points_visible(Operator):
 
     def execute(self, context):
         objects_to_flatten = []
-        if context.scene.gp_flattener.flattener_gp_object is not None: 
-            context.view_layer.objects.active = context.scene.gp_flattener.flattener_gp_object
+        gp_props = context.scene.gp_flattener
+
+        if gp_props.flattener_gp_object is not None: 
+            context.view_layer.objects.active = gp_props.flattener_gp_object
             if self.bake_animation:
-                bpy.ops.gpencil.bake_grease_pencil_animation(step= context.scene.gp_flattener.animation_step) #This will create a new object with baked animation
+                bpy.ops.gpencil.bake_grease_pencil_animation(step= gp_props.animation_step) #This will create a new object with baked animation
             else:
                 gp_obj = context.active_object.copy()
                 context.view_layer.objects.link(gp_obj)
                 context.view_layer.objects.active = gp_obj
 
             gp_obj = context.active_object
-            gp_obj.name = f"{context.scene.gp_flattener.flattener_gp_object.name}_flattened"
+            gp_obj.name = f"{gp_props.flattener_gp_object.name}_flattened"
             move_obj_to_collection(context, 'Target', gp_obj)
 
             objects_to_flatten.append(gp_obj)
             delete_non_visible_points(context, gp_obj)
 
-        if context.scene.gp_flattener.flattener_gp_line_art is not None:
-            context.scene.gp_flattener.flattener_gp_line_art.select_set(True)
-            context.view_layer.objects.active =  context.scene.gp_flattener.flattener_gp_line_art
-            bpy.ops.gpencil.bake_grease_pencil_animation(step=context.scene.gp_flattener.animation_step) #This will create a new object with baked animation
+        if gp_props.flattener_gp_line_art is not None:
+            bpy.ops.object.select_all(action='DESELECT')
+            gp_props.flattener_gp_line_art.select_set(True)
+            context.view_layer.objects.active =  gp_props.flattener_gp_line_art
+            bpy.ops.gpencil.bake_grease_pencil_animation(step=gp_props.animation_step) #This will create a new object with baked animation
             line_art_obj = context.active_object
-            line_art_obj.name = f"{context.scene.gp_flattener.flattener_gp_line_art.name}_flattened"
+            line_art_obj.name = f"{gp_props.flattener_gp_line_art.name}_flattened"
             move_obj_to_collection(context, 'Target', line_art_obj)
             objects_to_flatten.append(line_art_obj)
+
+
+        if gp_props.use_mesh_collection:
+            if context.space_data.region_3d.view_perspective != 'CAMERA':
+                bpy.ops.view3d.view_camera()
+            bpy.ops.object.select_all(action='DESELECT')
+            for obj in gp_props.flattener_mesh_collection.objects:
+                obj.select_set(True)
+            bpy.ops.gpencil.bake_mesh_animation(step=gp_props.animation_step)
+            mesh_obj = context.active_object
+            mesh_obj.name = f"{gp_props.flattener_mesh_collection.name}_flattened"
+            move_obj_to_collection(context, 'Target', mesh_obj)
+
 
         if self.flatten_object:
             #TODO Do not depend on external operators for this one
             #TODO Let the user choose the distance to camera for reprojection
             if context.space_data.region_3d.view_perspective != 'CAMERA':
                 bpy.ops.view3d.view_camera()
-
+            bpy.ops.object.select_all(action='DESELECT')
             for obj in objects_to_flatten:
-                context.view_layer.objects.active  = obj
+                context.view_layer.objects.active = obj
                 bpy.ops.gp.batch_reproject_all_frames()
 
+        if self.merge_flattened:
+            print('on merge calice !!')
+
         if self.hide_originals:
-            if context.scene.gp_flattener.flattener_mesh_collection is not None: 
-                context.scene.gp_flattener.flattener_mesh_collection.hide_viewport = True
-            if context.scene.gp_flattener.flattener_gp_object is not None:
-                context.scene.gp_flattener.flattener_gp_object.hide_viewport = True
-            if context.scene.gp_flattener.flattener_gp_line_art is not None:
-                context.scene.gp_flattener.flattener_gp_line_art.hide_viewport = True
+            if gp_props.flattener_mesh_collection is not None: 
+                gp_props.flattener_mesh_collection.hide_viewport = True
+            if gp_props.flattener_gp_object is not None:
+                gp_props.flattener_gp_object.hide_viewport = True
+            if gp_props.flattener_gp_line_art is not None:
+                gp_props.flattener_gp_line_art.hide_viewport = True
         return {'FINISHED'}
         
 ### Registration

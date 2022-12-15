@@ -47,3 +47,9 @@ class GP_Flattener_Settings(PropertyGroup):
         name="Line Art Object",
         type=bpy.types.Object,
     )
+
+    merge_flattened : BoolProperty(
+        name="Merge Flattened objects",
+        description="Merge all flattened objects",
+        default=True
+    )
