@@ -28,7 +28,8 @@ class GP_Flattener_Settings(PropertyGroup):
     animation_step : IntProperty(
         name = "Animation Step",
         description = "Number of frame between two keyframes. Only used for animation baking",
-        default = 2
+        default = 2,
+        min=1
     )
 
     flattener_mesh_collection : PointerProperty(
