@@ -54,23 +54,10 @@ class GP_OT_get_points_visible(Operator):
         default=True
     )
 
-    generate_outline : BoolProperty(
-        name="Generate Outline",
-        description="Generate outline on an another layer",
-        default=True
-
-    )
-
     flatten_object : BoolProperty(
         name = "Flatten Object",
         description = "Call Reproject Operator after stroke selection",
         default= True
-    )
-
-    animation_step : IntProperty(
-        name = "Animation Step",
-        description = "Number of frame between two keyframes. Only used for animation baking",
-        default = 2
     )
 
     hide_originals : BoolProperty(
@@ -85,28 +72,28 @@ class GP_OT_get_points_visible(Operator):
 
     def execute(self, context):
         objects_to_flatten = []
-        if context.scene.flattener_gp_object is not None: 
-            context.view_layer.objects.active = context.scene.flattener_gp_object
+        if context.scene.gp_flattener.flattener_gp_object is not None: 
+            context.view_layer.objects.active = context.scene.gp_flattener.flattener_gp_object
             if self.bake_animation:
-                bpy.ops.gpencil.bake_grease_pencil_animation(step=self.animation_step) #This will create a new object with baked animation
+                bpy.ops.gpencil.bake_grease_pencil_animation(step= context.scene.gp_flattener.animation_step) #This will create a new object with baked animation
             else:
                 gp_obj = context.active_object.copy()
                 context.view_layer.objects.link(gp_obj)
                 context.view_layer.objects.active = gp_obj
 
             gp_obj = context.active_object
-            gp_obj.name = f"{context.scene.flattener_gp_object.name}_flattened"
+            gp_obj.name = f"{context.scene.gp_flattener.flattener_gp_object.name}_flattened"
             move_obj_to_collection(context, 'Target', gp_obj)
 
             objects_to_flatten.append(gp_obj)
             delete_non_visible_points(context, gp_obj)
 
-        if context.scene.flattener_gp_line_art is not None:
-            context.scene.flattener_gp_line_art.select_set(True)
-            context.view_layer.objects.active = context.scene.flattener_gp_line_art
-            bpy.ops.gpencil.bake_grease_pencil_animation(step=self.animation_step) #This will create a new object with baked animation
+        if context.scene.gp_flattener.flattener_gp_line_art is not None:
+            context.scene.gp_flattener.flattener_gp_line_art.select_set(True)
+            context.view_layer.objects.active =  context.scene.gp_flattener.flattener_gp_line_art
+            bpy.ops.gpencil.bake_grease_pencil_animation(step=context.scene.gp_flattener.animation_step) #This will create a new object with baked animation
             line_art_obj = context.active_object
-            line_art_obj.name = f"{context.scene.flattener_gp_line_art.name}_flattened"
+            line_art_obj.name = f"{context.scene.gp_flattener.flattener_gp_line_art.name}_flattened"
             move_obj_to_collection(context, 'Target', line_art_obj)
             objects_to_flatten.append(line_art_obj)
 
@@ -121,8 +108,12 @@ class GP_OT_get_points_visible(Operator):
                 bpy.ops.gp.batch_reproject_all_frames()
 
         if self.hide_originals:
-            context.scene.flattener_mesh_collection.hide_viewport = True
-            context.scene.flattener_gp_object.hide_viewport = True
+            if context.scene.gp_flattener.flattener_mesh_collection is not None: 
+                context.scene.gp_flattener.flattener_mesh_collection.hide_viewport = True
+            if context.scene.gp_flattener.flattener_gp_object is not None:
+                context.scene.gp_flattener.flattener_gp_object.hide_viewport = True
+            if context.scene.gp_flattener.flattener_gp_line_art is not None:
+                context.scene.gp_flattener.flattener_gp_line_art.hide_viewport = True
         return {'FINISHED'}
         
 ### Registration

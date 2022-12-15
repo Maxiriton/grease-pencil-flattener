@@ -36,27 +36,26 @@ from bpy.props import BoolProperty, FloatProperty
 from . import OP_point_selection
 from . import UI_converter_panel
 
-# from .properties import GP_PG_30_StudioSettings
+from .properties import GP_Flattener_Settings
 
-class GP_30_prefs(AddonPreferences):
-    bl_idname = __package__
+# class GP_30_prefs(AddonPreferences):
+#     bl_idname = __package__
 
-    ## tabs
-    use_modifiers : BoolProperty(
-        name="Use Modifiers",
-        default=True
-    )
+#     ## tabs
+#     use_modifiers : BoolProperty(
+#         name="Use Modifiers",
+#         default=True
+#     )
 
-    def draw(self, context):
-        layout = self.layout
-        row= layout.row(align=True)
-        row.prop(self, "use_modifier")
+#     def draw(self, context):
+#         layout = self.layout
+#         row= layout.row(align=True)
+#         row.prop(self, "use_modifier")
 
 
-# classes = (
-#     GP_PG_30_StudioSettings,
-#     GP_30_prefs,
-# )
+classes = (
+    GP_Flattener_Settings,
+)
 
 addon_modules = (
     OP_point_selection,
@@ -64,18 +63,22 @@ addon_modules = (
 )
 
 def register():
-    # for cls in classes:
-    #     bpy.utils.register_class(cls)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
     for mod in addon_modules:
         mod.register()
+
+    bpy.types.Scene.gp_flattener = bpy.props.PointerProperty(type = GP_Flattener_Settings)
 
 def unregister():
     for mod in reversed(addon_modules):
         mod.unregister()
 
-    # for cls in reversed(classes):
-    #     bpy.utils.unregister_class(cls)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
+    del bpy.types.Scene.gp_flattener
 
 
 if __name__ == "__main__":
