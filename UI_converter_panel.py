@@ -33,11 +33,29 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
         scene = context.scene
 
         row = layout.row(align=True)
-        row.prop(scene.gp_flattener, "flattener_mesh_collection")
+        split = row.split(factor=0.1)
+        c = split.column()
+        c.prop(scene.gp_flattener,"use_mesh_collection",text="", icon="OUTLINER_COLLECTION")
+        split = split.split()
+        c = split.column()
+        c.prop(scene.gp_flattener, "flattener_mesh_collection")
+        c.enabled = context.scene.gp_flattener.use_mesh_collection
         row = layout.row(align=True)
-        row.prop(scene.gp_flattener, "flattener_gp_object")
+        split = row.split(factor=0.1)
+        c = split.column()
+        c.prop(scene.gp_flattener,"use_grease_pencil_object",text="", icon="OUTLINER_OB_GREASEPENCIL")
+        split = split.split()
+        c = split.column()
+        c.prop(scene.gp_flattener, "flattener_gp_object")
+        c.enabled = context.scene.gp_flattener.use_grease_pencil_object
         row = layout.row(align=True)
-        row.prop(scene.gp_flattener, "flattener_gp_line_art")
+        split = row.split(factor=0.1)
+        c = split.column()
+        c.prop(scene.gp_flattener,"use_line_art",text="", icon="OUTLINER_DATA_GREASEPENCIL")
+        split = split.split()
+        c = split.column()
+        c.prop(scene.gp_flattener, "flattener_gp_line_art")
+        c.enabled = context.scene.gp_flattener.use_line_art
         row = layout.row(align=True)
         row.operator('gp.get_visible_points')
 
