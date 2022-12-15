@@ -44,8 +44,8 @@ def delete_non_visible_points(context, gp_obj):
 
 class GP_OT_get_points_visible(Operator):
     """Select all visibles points """
-    bl_idname = "gp.get_visible_points"
-    bl_label = "Select Visible Points"
+    bl_idname = "gp.flatten_grease_pencil"
+    bl_label = "Flatten !"
     bl_options = {'REGISTER','UNDO'}
 
     bake_animation : BoolProperty(
@@ -112,6 +112,8 @@ class GP_OT_get_points_visible(Operator):
             mesh_obj.name = f"{gp_props.flattener_mesh_collection.name}_flattened"
             move_obj_to_collection(context, 'Target', mesh_obj)
 
+            #TODO Remove lines layers in this object
+
 
         if self.flatten_object:
             #TODO Do not depend on external operators for this one
@@ -123,7 +125,7 @@ class GP_OT_get_points_visible(Operator):
                 context.view_layer.objects.active = obj
                 bpy.ops.gp.batch_reproject_all_frames()
 
-        if self.merge_flattened:
+        if gp_props.merge_flattened:
             print('on merge calice !!')
 
         if self.hide_originals:
