@@ -13,6 +13,7 @@ def move_obj_to_collection(context, target_collection_name, obj):
 
 
 def delete_non_visible_points(context, gp_obj):
+    '''Delete all the non visible point '''
     start_time = time.time()
     # For each point on the stroke we check if it is visible from screen
     bpy.ops.object.mode_set(mode='EDIT_GPENCIL', toggle=False)
@@ -60,11 +61,18 @@ class GP_OT_get_points_visible(Operator):
         default= True
     )
 
+    merge_fills : BoolProperty(
+        name="Merge Fills",
+        description="Merge all fills layers in mesh grease pencil",
+        default=True
+    )
+
     hide_originals : BoolProperty(
         name= "Hide Base Objects",
         description= " Hide the mesh collection and the orginal grease pencil object after the operation",
         default= True
     )
+
 
     @classmethod
     def poll(cls, context):
@@ -90,7 +98,7 @@ class GP_OT_get_points_visible(Operator):
             objects_to_flatten.append(gp_obj)
             delete_non_visible_points(context, gp_obj)
 
-        if gp_props.flattener_gp_line_art is not None:
+        if gp_props.use_line_art and gp_props.flattener_gp_line_art is not None:
             bpy.ops.object.select_all(action='DESELECT')
             gp_props.flattener_gp_line_art.select_set(True)
             context.view_layer.objects.active =  gp_props.flattener_gp_line_art
@@ -107,26 +115,43 @@ class GP_OT_get_points_visible(Operator):
             bpy.ops.object.select_all(action='DESELECT')
             for obj in gp_props.flattener_mesh_collection.objects:
                 obj.select_set(True)
-            bpy.ops.gpencil.bake_mesh_animation(step=gp_props.animation_step)
+            bpy.ops.gpencil.bake_mesh_animation(step=gp_props.animation_step, project_type='KEEP')
             mesh_obj = context.active_object
             mesh_obj.name = f"{gp_props.flattener_mesh_collection.name}_flattened"
             move_obj_to_collection(context, 'Target', mesh_obj)
+            objects_to_flatten.append(mesh_obj)
 
-            #TODO Remove lines layers in this object
+            layers_to_remove = []
+            for layer in mesh_obj.data.layers:
+                if layer.info.endswith('_Lines'):
+                    layers_to_remove.append(layer)
 
+            for to_remove in layers_to_remove:
+                mesh_obj.data.layers.remove(to_remove)
+
+            if self.merge_fills:
+                bpy.ops.object.mode_set(mode='EDIT_GPENCIL')
+                mesh_obj.data.layers.active_index =0
+                bpy.ops.gpencil.layer_merge(mode='ALL')
+                bpy.ops.object.mode_set(mode='OBJECT')
 
         if self.flatten_object:
-            #TODO Do not depend on external operators for this one
             #TODO Let the user choose the distance to camera for reprojection
             if context.space_data.region_3d.view_perspective != 'CAMERA':
                 bpy.ops.view3d.view_camera()
             bpy.ops.object.select_all(action='DESELECT')
             for obj in objects_to_flatten:
+                obj.select_set(True)
                 context.view_layer.objects.active = obj
                 bpy.ops.gp.batch_reproject_all_frames()
 
         if gp_props.merge_flattened:
-            print('on merge calice !!')
+            bpy.ops.object.select_all(action='DESELECT')
+            print(f'On merge !! {len(objects_to_flatten)}')
+            for obj in objects_to_flatten:
+                obj.select_set(True)
+                context.view_layer.objects.active = obj
+            bpy.ops.object.join() 
 
         if self.hide_originals:
             if gp_props.flattener_mesh_collection is not None: 

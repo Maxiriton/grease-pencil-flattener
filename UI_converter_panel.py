@@ -59,6 +59,8 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
         c.prop(scene.gp_flattener, "flattener_gp_line_art")
         c.enabled = context.scene.gp_flattener.use_line_art
         row = layout.row(align=True)
+        row.prop(scene.gp_flattener, "merge_flattened")
+        row = layout.row(align=True)
         row.operator('gp.flatten_grease_pencil', icon="IPO_BOUNCE")
 
 ### Registration
