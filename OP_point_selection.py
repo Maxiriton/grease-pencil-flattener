@@ -43,6 +43,112 @@ def delete_non_visible_points(context, gp_obj):
     end_time = time.time()
     print(f'Operation réalisée en {end_time - start_time} s')
 
+
+def create_instance_dict(context, obj):
+    result = {}
+
+    for frame in range(context.scene.frame_start, context.scene.frame_end +1):
+        context.scene.frame_set(frame)
+
+        depsgraph = context.evaluated_depsgraph_get()
+        evaluated_train = obj.evaluated_get(depsgraph)
+        current_frame_list =[]
+        for inst in depsgraph.object_instances:
+            if not inst.is_instance:
+                continue
+            if inst.parent != evaluated_train:
+                continue 
+            if inst.instance_object.name == obj.name:
+                continue
+            current_frame_list.append((inst.instance_object.name,inst.matrix_world.copy()))
+
+            # print(Vector(inst.matrix_world.to_translation()- context.scene.camera.matrix_world.to_translation()).length)
+            # print(f"Le nom est {inst. instance_object.name} et sa matrice est {inst.matrix_world}")
+
+        result[frame] = current_frame_list
+
+    return result
+
+
+def duplicate(obj, data=True, actions=True, collection=None):
+    obj_copy = obj.copy()
+    if data:
+        obj_copy.data = obj_copy.data.copy()
+    if actions and obj_copy.animation_data:
+        obj_copy.animation_data.action = obj_copy.animation_data.action.copy()
+    collection.objects.link(obj_copy)
+    return obj_copy
+
+def instanciate_gp_from_dict(context, dict):
+    to_duplicate = bpy.data.objects['Stroke']
+    target_collection = bpy.data.collections['Target']
+    target_obj = bpy.data.objects['Target']
+    previous_frame = 0
+    for index, frame in enumerate(range(context.scene.frame_start, context.scene.frame_end +1)):
+        bpy.ops.object.select_all(action='DESELECT')
+        for name, matrix in dict[frame]:
+            # TODO Choose object to duplicate based on name and distance to camera
+
+            new_obj = duplicate(to_duplicate,True,False,target_collection)
+            new_obj.matrix_world = matrix
+
+            new_obj.data.layers[0].frames[0].frame_number = frame
+
+            new_obj.select_set(True)
+        
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        target_obj.select_set(True)
+        context.view_layer.objects.active = target_obj
+
+        bpy.ops.object.join()
+        #on passe en mode gp edit
+        bpy.ops.gpencil.editmode_toggle()
+
+        #on deselectionne tout
+        bpy.ops.gpencil.select_all(action='DESELECT',)
+        #on selectionne les points de layer line
+        for stroke in target_obj.data.layers['Lines'].frames[max(index-1,0)].strokes:
+            stroke.select = True
+        #on se place a la bonne frame 
+        context.scene.frame_set(frame)
+        #on merge down
+        target_obj.data.layers.active = target_obj.data.layers['Lines']
+        target_obj.data.layers['Lines'].select = True
+
+        bpy.ops.gpencil.layer_merge(mode='ALL')
+        #on supprime les points selectionnés
+        bpy.ops.gpencil.delete(type='STROKES')
+        #on passe en mode object
+        bpy.ops.gpencil.editmode_toggle()
+
+        bpy.ops.outliner.orphans_purge(do_recursive=True)
+        previous_frame = frame
+        print(f"Frame {frame} done ")
+
+
+class GP_OT_evaluate_despgraph(Operator):
+    """Evaluate the current dependency graph"""
+    bl_idname="gp.evaluate_graph"
+    bl_description="Evaluate dependency graph at current frame"
+    bl_label = "Evaluate !"
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode == 'OBJECT'
+
+    def execute(self, context):
+        train = context.scene.gp_flattener.train_object
+        if not train:
+            return {'CANCELED'}
+        dict = create_instance_dict(context, train)
+        print(len(dict))
+
+        instanciate_gp_from_dict(context, dict)
+
+       
+        return {'FINISHED'}
+
+
 class GP_OT_get_points_visible(Operator):
     """Select all visibles points """
     bl_idname = "gp.flatten_grease_pencil"
@@ -165,6 +271,7 @@ class GP_OT_get_points_visible(Operator):
 ### Registration
 classes = (
 GP_OT_get_points_visible,
+GP_OT_evaluate_despgraph,
 )
 
 def register():

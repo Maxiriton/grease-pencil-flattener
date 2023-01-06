@@ -63,6 +63,11 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
         row = layout.row(align=True)
         row.operator('gp.flatten_grease_pencil', icon="IPO_BOUNCE")
 
+        row = layout.row(align=True)
+        row.prop(scene.gp_flattener, "train_object")
+        row = layout.row(align=True)
+        row.operator('gp.evaluate_graph', icon="DESKTOP")
+
 ### Registration
 classes = (
 VIEW3D_PT_convert_grease_pencil_panel,

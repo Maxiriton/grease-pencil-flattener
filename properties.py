@@ -3,7 +3,8 @@ from bpy.types import PropertyGroup
 from bpy.props import (
                     BoolProperty,
                     IntProperty,
-                    PointerProperty
+                    PointerProperty,
+                    FloatProperty
 )
 
 class GP_Flattener_Settings(PropertyGroup):
@@ -42,6 +43,25 @@ class GP_Flattener_Settings(PropertyGroup):
     flattener_gp_object : PointerProperty(
         name="Grease Pencil Object",
         type=bpy.types.Object,
+    )
+
+    train_object : PointerProperty(
+        name="Train Object",
+        type=bpy.types.Object
+    )
+
+    lod_1_distance : FloatProperty(
+        name="LOD 1 distance",
+        description="First Level of Detail distance",
+        default=5.4,
+        min=1.0
+    )
+
+    lod_2_distance : FloatProperty(
+        name="LOD 2 distance",
+        description="Second Level of Detail distance",
+        default=23.23,
+        min=1.0
     )
 
     flattener_gp_line_art : PointerProperty(
