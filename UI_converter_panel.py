@@ -33,6 +33,9 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
         scene = context.scene
 
         row = layout.row(align=True)
+        row.prop(scene.gp_flattener, "target_collection")
+        row = layout.row(align=True)
+        row.prop(scene.gp_flattener, "use_scene_keyframe")
         row.prop(scene.gp_flattener, "animation_step")
         row = layout.row(align=True)
         split = row.split(factor=0.1)
