@@ -50,6 +50,19 @@ class GP_Flattener_Settings(PropertyGroup):
         type=bpy.types.Object
     )
 
+    target_collection : PointerProperty(
+        name="Target Collection",
+        description="Target collection",
+        type=bpy.types.Collection, 
+    )
+
+    use_scene_keyframe : BoolProperty(
+        name="Use Scene Keyframes",
+        description="Make sure that there will keys at keyframes in the scene",
+        default=True
+    )
+
+
     lod_1_distance : FloatProperty(
         name="LOD 1 distance",
         description="First Level of Detail distance",
@@ -72,5 +85,11 @@ class GP_Flattener_Settings(PropertyGroup):
     merge_flattened : BoolProperty(
         name="Merge Flattened objects",
         description="Merge all flattened objects",
+        default=True
+    )
+
+    generate_lattice : BoolProperty(
+        name="Add Lattice Transform",
+        description ="Add a lattice modfier to the final drawing",
         default=True
     )
