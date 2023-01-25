@@ -5,11 +5,24 @@ from bpy.props import BoolProperty, IntProperty
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
-def move_obj_to_collection(context, target_collection_name, obj):
+def find_keyframes(context):
+    keyframes = []
+    for obj in bpy.context.scene.objects:
+        if obj.animation_data is None:
+            continue
+        for fcu in obj.animation_data.action.fcurves:
+            #if fcu.data_path.startswith('pose.bones.["%s"]' % BONE_NAME):
+            for pt in fcu.keyframe_points:
+                key = int(pt.co.x)
+                if key not in keyframes:
+                    keyframes.append(key)
+    return keyframes
+
+def move_obj_to_collection(context, target_collection, obj):
     for coll in obj.users_collection:
         # Unlink the object
         coll.objects.unlink(obj)
-    bpy.data.collections[target_collection_name].objects.link(obj)
+    target_collection.objects.link(obj)
 
 
 def delete_non_visible_points(context, gp_obj):
@@ -170,7 +183,7 @@ class GP_OT_get_points_visible(Operator):
     merge_fills : BoolProperty(
         name="Merge Fills",
         description="Merge all fills layers in mesh grease pencil",
-        default=True
+        default=False
     )
 
     hide_originals : BoolProperty(
@@ -188,7 +201,15 @@ class GP_OT_get_points_visible(Operator):
         objects_to_flatten = []
         gp_props = context.scene.gp_flattener
 
-        if gp_props.flattener_gp_object is not None: 
+        if not gp_props.target_collection:
+            self.report({'INFO'}, "Please define a target collection")
+            return {'FINISHED'}
+
+
+        if gp_props.use_scene_keyframe:
+            keyframes = find_keyframes(context)
+
+        if gp_props.use_grease_pencil_object and gp_props.flattener_gp_object is not None: 
             context.view_layer.objects.active = gp_props.flattener_gp_object
             if self.bake_animation:
                 bpy.ops.gpencil.bake_grease_pencil_animation(step= gp_props.animation_step) #This will create a new object with baked animation
@@ -199,7 +220,7 @@ class GP_OT_get_points_visible(Operator):
 
             gp_obj = context.active_object
             gp_obj.name = f"{gp_props.flattener_gp_object.name}_flattened"
-            move_obj_to_collection(context, 'Target', gp_obj)
+            move_obj_to_collection(context, gp_props.target_collection, gp_obj)
 
             objects_to_flatten.append(gp_obj)
             delete_non_visible_points(context, gp_obj)
@@ -211,7 +232,7 @@ class GP_OT_get_points_visible(Operator):
             bpy.ops.gpencil.bake_grease_pencil_animation(step=gp_props.animation_step) #This will create a new object with baked animation
             line_art_obj = context.active_object
             line_art_obj.name = f"{gp_props.flattener_gp_line_art.name}_flattened"
-            move_obj_to_collection(context, 'Target', line_art_obj)
+            move_obj_to_collection(context, gp_props.target_collection, line_art_obj)
             objects_to_flatten.append(line_art_obj)
 
 
@@ -219,27 +240,35 @@ class GP_OT_get_points_visible(Operator):
             if context.space_data.region_3d.view_perspective != 'CAMERA':
                 bpy.ops.view3d.view_camera()
             bpy.ops.object.select_all(action='DESELECT')
+            valid_selection = False
             for obj in gp_props.flattener_mesh_collection.objects:
-                obj.select_set(True)
-            bpy.ops.gpencil.bake_mesh_animation(step=gp_props.animation_step, project_type='KEEP')
-            mesh_obj = context.active_object
-            mesh_obj.name = f"{gp_props.flattener_mesh_collection.name}_flattened"
-            move_obj_to_collection(context, 'Target', mesh_obj)
-            objects_to_flatten.append(mesh_obj)
+                if obj.type == 'MESH':
+                    obj.select_set(True)
+                    context.view_layer.objects.active = obj
+                    valid_selection = True
 
-            layers_to_remove = []
-            for layer in mesh_obj.data.layers:
-                if layer.info.endswith('_Lines'):
-                    layers_to_remove.append(layer)
+            if not valid_selection:
+                print('Pas de selection valide dans la selection, on arrete là pour le mesh')
+            else :
+                bpy.ops.gpencil.bake_mesh_animation(step=gp_props.animation_step, project_type='KEEP')
+                mesh_obj = context.active_object
+                mesh_obj.name = f"{gp_props.flattener_mesh_collection.name}_flattened"
+                move_obj_to_collection(context, gp_props.target_collection, mesh_obj)
+                objects_to_flatten.append(mesh_obj)
 
-            for to_remove in layers_to_remove:
-                mesh_obj.data.layers.remove(to_remove)
+                layers_to_remove = []
+                for layer in mesh_obj.data.layers:
+                    if layer.info.endswith('_Lines'):
+                        layers_to_remove.append(layer)
 
-            if self.merge_fills:
-                bpy.ops.object.mode_set(mode='EDIT_GPENCIL')
-                mesh_obj.data.layers.active_index =0
-                bpy.ops.gpencil.layer_merge(mode='ALL')
-                bpy.ops.object.mode_set(mode='OBJECT')
+                for to_remove in layers_to_remove:
+                    mesh_obj.data.layers.remove(to_remove)
+
+                if self.merge_fills:
+                    bpy.ops.object.mode_set(mode='EDIT_GPENCIL')
+                    mesh_obj.data.layers.active_index =0
+                    bpy.ops.gpencil.layer_merge(mode='ALL')
+                    bpy.ops.object.mode_set(mode='OBJECT')
 
         if self.flatten_object:
             #TODO Let the user choose the distance to camera for reprojection
@@ -257,7 +286,17 @@ class GP_OT_get_points_visible(Operator):
             for obj in objects_to_flatten:
                 obj.select_set(True)
                 context.view_layer.objects.active = obj
-            bpy.ops.object.join() 
+            bpy.ops.object.join()
+
+
+        if gp_props.use_scene_keyframe:
+            print(f'on detruiiiit {keyframes}')
+            for obj in gp_props.target_collection.objects:
+                for layer in obj.data.layers:
+                    for frame in layer.frames:
+                        if frame.frame_number not in keyframes:
+                            layer.frames.remove(frame)
+
 
         if self.hide_originals:
             if gp_props.flattener_mesh_collection is not None: 
