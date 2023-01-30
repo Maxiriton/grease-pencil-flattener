@@ -65,6 +65,8 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
         row.prop(scene.gp_flattener, "merge_flattened")
         row = layout.row(align=True)
         row.operator('gp.flatten_grease_pencil', icon="IPO_BOUNCE")
+        row = layout.row(align=True)
+        row.operator('flattener.add_lattice', icon="IPO_BOUNCE")
 
         row = layout.row(align=True)
         row.prop(scene.gp_flattener, "train_object")
