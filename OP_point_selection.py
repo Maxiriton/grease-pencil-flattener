@@ -7,9 +7,13 @@ from mathutils import Vector
 
 def find_keyframes(context):
     keyframes = []
-    for obj in bpy.context.scene.objects:
+    for obj in context.scene.objects:
+        if obj.type != 'ARMATURE':
+            continue
         if obj.animation_data is None:
             continue
+
+        print(obj.name)
         for fcu in obj.animation_data.action.fcurves:
             #if fcu.data_path.startswith('pose.bones.["%s"]' % BONE_NAME):
             for pt in fcu.keyframe_points:
@@ -32,13 +36,14 @@ def delete_non_visible_points(context, gp_obj):
     bpy.ops.object.mode_set(mode='EDIT_GPENCIL', toggle=False)
 
     for layer in gp_obj.data.layers:
+        print(layer.info)
         for frame in layer.frames:
             context.scene.frame_set(frame.frame_number)
+            index = 0
             for stroke in frame.strokes:
                 for point in stroke.points:
                     co_world = gp_obj.matrix_world @ point.co
-
-                    ray_target = context.scene.camera.location  #We launch a ray from the center of the camera
+                    ray_target = context.scene.camera.matrix_world.translation  #We launch a ray from the center of the camera
                     ray_direction = Vector(ray_target - co_world).normalized()
                 
                     _, _, _, _, obj, _ = context.scene.ray_cast(context.view_layer.depsgraph, co_world, ray_direction)
@@ -49,13 +54,13 @@ def delete_non_visible_points(context, gp_obj):
                     else:
                         #ce point a été intercepté par un objet quelconque, on doit le faire disparaitre    
                         point.select = True
-            # print(f"Layer {layer} - Frame {frame.frame_number}")
+                        index += 1 
+            # print(f"Layer {layer} - Frame {frame.frame_number} - to delete {index}")
             #We delete the selected points  
             bpy.ops.gpencil.delete(type='POINTS')
     bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
     end_time = time.time()
     print(f'Operation réalisée en {end_time - start_time} s')
-
 
 def create_instance_dict(context, obj):
     result = {}
@@ -92,23 +97,30 @@ def duplicate(obj, data=True, actions=True, collection=None):
     collection.objects.link(obj_copy)
     return obj_copy
 
+
 def instanciate_gp_from_dict(context, dict):
-    to_duplicate = bpy.data.objects['Stroke']
     target_collection = bpy.data.collections['Target']
-    target_obj = bpy.data.objects['Target']
-    previous_frame = 0
+    try:
+        target_obj = bpy.data.objects['instance_object']
+    except:
+        gp_data = bpy.data.grease_pencils.new('roger')
+        target_obj = bpy.data.objects.new('instance_object', gp_data)
+        target_collection.objects.link(target_obj)
+
+    
     for index, frame in enumerate(range(context.scene.frame_start, context.scene.frame_end +1)):
+        print('--------------------------')
         bpy.ops.object.select_all(action='DESELECT')
         for name, matrix in dict[frame]:
-            # TODO Choose object to duplicate based on name and distance to camera
-
+            to_duplicate = bpy.data.objects[name]
+            if to_duplicate.type != 'GPENCIL':
+                continue
             new_obj = duplicate(to_duplicate,True,False,target_collection)
             new_obj.matrix_world = matrix
 
             new_obj.data.layers[0].frames[0].frame_number = frame
-
             new_obj.select_set(True)
-        
+
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
         target_obj.select_set(True)
         context.view_layer.objects.active = target_obj
@@ -135,7 +147,7 @@ def instanciate_gp_from_dict(context, dict):
         bpy.ops.gpencil.editmode_toggle()
 
         bpy.ops.outliner.orphans_purge(do_recursive=True)
-        previous_frame = frame
+        # previous_frame = frame
         print(f"Frame {frame} done ")
 
 
@@ -153,10 +165,10 @@ class GP_OT_evaluate_despgraph(Operator):
         train = context.scene.gp_flattener.train_object
         if not train:
             return {'CANCELED'}
-        dict = create_instance_dict(context, train)
-        print(len(dict))
+        roger = create_instance_dict(context, train)
 
-        instanciate_gp_from_dict(context, dict)
+
+        instanciate_gp_from_dict(context, roger)
 
        
         return {'FINISHED'}
@@ -213,6 +225,7 @@ class GP_OT_get_points_visible(Operator):
             context.view_layer.objects.active = gp_props.flattener_gp_object
             if self.bake_animation:
                 bpy.ops.gpencil.bake_grease_pencil_animation(step= gp_props.animation_step) #This will create a new object with baked animation
+                print('animation baking is done')
             else:
                 gp_obj = context.active_object.copy()
                 context.view_layer.objects.link(gp_obj)
