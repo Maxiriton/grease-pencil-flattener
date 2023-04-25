@@ -20,6 +20,31 @@ import bpy
 from bpy.types import Panel
 
 
+
+
+
+class VIEW3D_PT_train_special_panel(Panel):
+    """UI for managing Grease Pencil Flattener"""
+    bl_idname = "VIEW3D_PT_train_special_panel"
+    bl_label = "Train Grease Pencil"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Grease Pencil"
+
+    def draw(self, context):
+        layout = self.layout
+
+        row = layout.row()
+        split = row.split(factor=0.9)
+        c = split.column()
+        c.operator('gp.bake_position_in_vertex_color')
+        split = split.split()
+        c = split.column()
+        c.operator('gp.reset_position_in_vertex_color', text="", icon='CANCEL')
+        row = layout.row(align=True)
+        row.operator('gp.change_thickness_from_depth')
+
+
 class VIEW3D_PT_convert_grease_pencil_panel(Panel):
     """UI for managing Grease Pencil Flattener"""
     bl_idname = "VIEW3D_PT_grease_pencil_flattener_panel"
@@ -76,6 +101,7 @@ class VIEW3D_PT_convert_grease_pencil_panel(Panel):
 ### Registration
 classes = (
 VIEW3D_PT_convert_grease_pencil_panel,
+VIEW3D_PT_train_special_panel,
 )
 
 def register():

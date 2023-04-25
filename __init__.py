@@ -36,6 +36,7 @@ from bpy.props import BoolProperty, FloatProperty
 from . import OP_point_selection
 from . import UI_converter_panel
 from . import OP_lattice_modifier
+from . import OP_tickness_from_depth
 
 from .properties import GP_Flattener_Settings
 
@@ -61,7 +62,8 @@ classes = (
 addon_modules = (
     OP_point_selection,
     OP_lattice_modifier,
-    UI_converter_panel
+    UI_converter_panel,
+    OP_tickness_from_depth
 )
 
 def register():
