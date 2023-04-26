@@ -43,6 +43,8 @@ class VIEW3D_PT_train_special_panel(Panel):
         c.operator('gp.reset_position_in_vertex_color', text="", icon='CANCEL')
         row = layout.row(align=True)
         row.operator('gp.change_thickness_from_depth')
+        row = layout.row(align=True)
+        row.operator('gp.convert_geo_node_to_gp')
 
 
 class VIEW3D_PT_convert_grease_pencil_panel(Panel):

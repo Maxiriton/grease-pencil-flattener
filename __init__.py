@@ -37,6 +37,7 @@ from . import OP_point_selection
 from . import UI_converter_panel
 from . import OP_lattice_modifier
 from . import OP_tickness_from_depth
+from . import OP_convert_geo_node_to_gp
 
 from .properties import GP_Flattener_Settings
 
@@ -63,7 +64,8 @@ addon_modules = (
     OP_point_selection,
     OP_lattice_modifier,
     UI_converter_panel,
-    OP_tickness_from_depth
+    OP_tickness_from_depth,
+    OP_convert_geo_node_to_gp
 )
 
 def register():
