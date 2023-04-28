@@ -1,4 +1,5 @@
 import bpy
+import time
 from bpy.types import Operator
 
 class GP_OT_convert_geo_nodes(Operator):
@@ -25,6 +26,7 @@ class GP_OT_convert_geo_nodes(Operator):
 
 
         for frame in range(context.scene.frame_start, context.scene.frame_end+1):
+            start_time = time.time()
             context.scene.frame_set(frame)
             context.view_layer.objects.active = obj
             obj.select_set(True)    
@@ -32,7 +34,8 @@ class GP_OT_convert_geo_nodes(Operator):
             newly_created_object = context.active_object
             newly_created_object.select_set(True)
             to_select.append(newly_created_object)
-            print(f"Frame {frame} done")
+            end_time = time.time()
+            print(f"Frame {frame} done in {end_time - start_time} seconds")
 
         for slc in to_select:
             slc.select_set(True)
