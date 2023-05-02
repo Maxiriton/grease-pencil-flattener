@@ -1,6 +1,7 @@
 import bpy
 import time
 from bpy.types import Operator
+from bpy.props import BoolProperty
 
 class GP_OT_convert_geo_nodes(Operator):
     """Convert current Geo Node Object in Grease pencil one """
@@ -8,9 +9,14 @@ class GP_OT_convert_geo_nodes(Operator):
     bl_label = "Convert Geo Node to Grease Pencil"
     bl_options = {'REGISTER','UNDO'}
 
+    merge_generated_objects : BoolProperty(
+        default=True
+    )
+
+
     @classmethod
     def poll(cls, context):
-        return  context.mode == 'OBJECT'
+        return  context.mode == 'OBJECT' and context.active_object is not None
 
     def execute(self, context):
         target_collection = bpy.data.collections['Test']
@@ -39,6 +45,9 @@ class GP_OT_convert_geo_nodes(Operator):
 
         for slc in to_select:
             slc.select_set(True)
+
+        if not self.merge_generated_objects:
+            return {'FINISHED'}
 
         context.view_layer.objects.active = target_obj
         target_obj.select_set(True)

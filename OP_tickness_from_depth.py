@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import Operator
-from bpy.props import FloatProperty
+from bpy.props import FloatProperty, EnumProperty
 from mathutils import Vector
 
 def lerp(a: float, b: float, t: float) -> float:
@@ -105,6 +105,23 @@ class GP_OT_change_tickness_from_depth(Operator):
     bl_label = "Remap tickness"
     bl_options = {'REGISTER','UNDO'}
 
+    easing : EnumProperty(
+        items = [('EaseIn','Ease In','','',0), 
+             ('EaseOut','Ease Out','','',1)],
+        name = "Easing",
+        default = 'EaseOut',
+    )
+
+
+    falloff : EnumProperty(
+        items = [('Linear','Linear','','',0), 
+             ('Quadratic','Quadratic','','',1),
+             ('Cubic','Cubic','','',2),
+             ('Quartic','Quartic','','',4),
+             ('Quintic','Quintic','','',5)],
+        name = "Falloff",
+        default = 'Linear',
+    )
 
     min_thickness : FloatProperty(
         default=1.0,
@@ -128,8 +145,28 @@ class GP_OT_change_tickness_from_depth(Operator):
             for index, frame in enumerate(layer.frames):
                 for stroke in frame.strokes:
                     for point in stroke.points:
-                       new_tickness_factor = lerp(self.min_thickness, self.max_thickness, point.vertex_color[0])
-                       point.pressure = new_tickness_factor
+                        fac = point.vertex_color[0]
+                        if self.falloff == 'Linear':
+                            pass
+                        elif self.falloff == 'Quadratic' and self.easing == 'EaseIn':
+                            fac = fac ** 2
+                        elif self.falloff == 'Quadratic' and self.easing == 'EaseOut':
+                            fac = 1 - (1- fac) ** 2
+                        elif self.falloff == 'Cubic' and self.easing == 'EaseIn':
+                            fac = fac ** 3
+                        elif self.falloff == 'Cubic' and self.easing == 'EaseOut':
+                            fac = 1 - (1- fac) ** 3
+                        elif self.falloff == 'Quartic' and self.easing == 'EaseIn':
+                            fac = fac ** 4
+                        elif self.falloff == 'Quartic' and self.easing == 'EaseOut':
+                            fac = 1 - (1- fac) ** 4
+                        elif self.falloff == 'Quintic' and self.easing == 'EaseIn':
+                            fac = fac ** 5
+                        elif self.falloff == 'Quintic' and self.easing == 'EaseOut':
+                            fac = 1 - (1- fac) ** 5
+
+                        new_tickness_factor = lerp(self.min_thickness, self.max_thickness, fac)
+                        point.pressure = new_tickness_factor
                 print(f"Progress {index/(total_frames-1) *100} %")
 
         return {'FINISHED'}
