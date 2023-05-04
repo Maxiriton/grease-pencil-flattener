@@ -44,6 +44,8 @@ class VIEW3D_PT_train_special_panel(Panel):
         row = layout.row(align=True)
         row.operator('gp.change_thickness_from_depth')
         row = layout.row(align=True)
+        row.operator('gp.change_strength_from_depth')
+        row = layout.row(align=True)
         row.operator('gp.convert_geo_node_to_gp')
 
 

@@ -98,9 +98,42 @@ class GP_OT_bake_position_in_vertex_color(Operator):
 
         return {'FINISHED'}
     
+
+class GP_OT_change_strength_from_depth(Operator):
+    """Change Tickness based depth """
+    bl_idname = "gp.change_strength_from_depth"
+    bl_label = "Remap Strength"
+    bl_options = {'REGISTER','UNDO'}
+
+
+    threshold : FloatProperty(
+        default=0.5,
+        min=0.0,
+        max=1.0
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return  context.active_object is not None and context.active_object.type == 'GPENCIL'
+
+    def execute(self, context):
+        obj = context.active_object
+
+        for layer in obj.data.layers:
+            total_frames = len(layer.frames)
+            for index, frame in enumerate(layer.frames):
+                for stroke in frame.strokes:
+                    for point in stroke.points:
+                        fac = point.vertex_color[0]
+                        point.strength = 0.0 if fac >= self.threshold else 1.0
+                print(f"Progress {index/(total_frames-1) *100} %")
+
+        return {'FINISHED'}
+    
+
     
 class GP_OT_change_tickness_from_depth(Operator):
-    """Run statistics """
+    """Change Tickness based depth """
     bl_idname = "gp.change_thickness_from_depth"
     bl_label = "Remap tickness"
     bl_options = {'REGISTER','UNDO'}
@@ -176,6 +209,7 @@ classes = (
 GP_OT_bake_position_in_vertex_color,
 GP_OT_reset_bake_in_vertex_color,
 GP_OT_change_tickness_from_depth,
+GP_OT_change_strength_from_depth,
 )
 
 def register():
