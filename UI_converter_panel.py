@@ -47,7 +47,12 @@ class VIEW3D_PT_train_special_panel(Panel):
         row.operator('gp.change_strength_from_depth')
         row = layout.row(align=True)
         row.operator('gp.convert_geo_node_to_gp')
-
+        row = layout.row(align=True)
+        row.operator('gp.store_radius_to_custom_property')
+        row = layout.row(align=True)
+        row.operator('gp.convert_custom_property_to_vertex_group')
+        row = layout.row(align=True)
+        row.operator('gp.convert_vertex_group_to_thickness')
 
 class VIEW3D_PT_convert_grease_pencil_panel(Panel):
     """UI for managing Grease Pencil Flattener"""
