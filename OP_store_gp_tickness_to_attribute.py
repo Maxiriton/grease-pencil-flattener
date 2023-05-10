@@ -22,12 +22,10 @@ class GP_OT_store_radius_to_custom_property(Operator):
         max_radius = 0.0
         #we assume that we start
         for spline in obj.data.splines:
-            point_spline = []
             for point in spline.points:
-                point_spline.append(point.radius)
+                result.append(point.radius)
                 if point.radius > max_radius:
                     max_radius = point.radius
-            result.append(point_spline)
 
         obj['stored_radius'] = result
         obj['max_radius'] = max_radius
@@ -46,7 +44,25 @@ class GP_OT_convert_custom_property_to_vertex_group(Operator):
         return  context.active_object is not None and context.active_object.type == 'MESH'
 
     def execute(self, context):
+        obj = context.active_object
+
+        try:
+            v_group = obj.vertex_groups["Thickness"]
+        except:
+            v_group = obj.vertex_groups.new(name="Thickness")
+
+        try:
+            max_radius = obj.vertex_groups["Max_Radius"]
+        except:
+            max_radius = obj.vertex_groups.new(name="Max_Radius")
+
         
+
+
+        for index, vertex in enumerate(obj.data.vertices):
+            obj.vertex_groups["Thickness"].add([vertex.index], obj['stored_radius'][index] / obj['max_radius'], 'REPLACE')
+            obj.vertex_groups["Max_Radius"].add([vertex.index], obj['max_radius'] / 100, 'REPLACE')
+
         return {'FINISHED'}
 
 
@@ -56,8 +72,23 @@ class GP_OT_convert_vertex_group_to_thickness(Operator):
     bl_label = "Convert vertex group to thickness"
     bl_options = {'REGISTER','UNDO'}
 
+
+    @classmethod
+    def poll(cls, context):
+        return  context.active_object is not None and context.active_object.type == 'GPENCIL'
+
+
     def execute(self, context):
-        print ('yiha')
+        obj = context.active_object
+
+        v = obj.vertex_groups['Thickness']
+
+
+        for stroke in obj.data.layers[0].frames[0].strokes:
+            for index, point in enumerate(stroke.points):
+                weight = stroke.points.weight_get(vertex_group_index=0,point_index=index)
+                multiply_factor = stroke.points.weight_get(vertex_group_index=1,point_index=index) * 100
+                point.pressure = weight * multiply_factor
         return {'FINISHED'}
 
 
