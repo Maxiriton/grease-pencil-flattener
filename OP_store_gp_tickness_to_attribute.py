@@ -81,14 +81,14 @@ class GP_OT_convert_vertex_group_to_thickness(Operator):
     def execute(self, context):
         obj = context.active_object
 
-        v = obj.vertex_groups['Thickness']
+        v = obj.vertex_groups['Thickness_vgroup']
 
 
         for stroke in obj.data.layers[0].frames[0].strokes:
             for index, point in enumerate(stroke.points):
                 weight = stroke.points.weight_get(vertex_group_index=0,point_index=index)
-                multiply_factor = stroke.points.weight_get(vertex_group_index=1,point_index=index) * 100
-                point.pressure = weight * multiply_factor
+                # multiply_factor = stroke.points.weight_get(vertex_group_index=1,point_index=index) * 100
+                point.pressure = weight 
         return {'FINISHED'}
 
 
