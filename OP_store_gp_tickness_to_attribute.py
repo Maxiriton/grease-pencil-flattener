@@ -81,7 +81,7 @@ class GP_OT_convert_vertex_group_to_thickness(Operator):
     def execute(self, context):
         obj = context.active_object
 
-        v = obj.vertex_groups['Thickness_vgroup']
+        # v = obj.vertex_groups['Thickness']
 
 
         for stroke in obj.data.layers[0].frames[0].strokes:
