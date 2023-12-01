@@ -1,15 +1,13 @@
 import bpy
 import time
 from bpy.types import Operator
-from bpy.props import BoolProperty, IntProperty
+from bpy.props import BoolProperty, IntProperty, FloatProperty
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
 def find_keyframes(context):
     keyframes = []
     for obj in context.scene.objects:
-        if obj.type != 'ARMATURE':
-            continue
         if obj.animation_data is None:
             continue
 
@@ -97,6 +95,30 @@ def duplicate(obj, data=True, actions=True, collection=None):
     collection.objects.link(obj_copy)
     return obj_copy
 
+def reproject_all_frames(context, gp_obj):
+    bpy.ops.gpencil.editmode_toggle()
+    start = time.time()
+    print('on est en edit mode')
+    gp_obj.data.use_multiedit = True
+    for layer in gp_obj.data.layers:
+        for frame in layer.frames:
+            bpy.ops.gpencil.select_all(action='SELECT')
+    bpy.ops.gpencil.reproject(type='VIEW', keep_original=False) 
+    bpy.ops.gpencil.editmode_toggle()
+    print(f"Le temps pour reprojetter est : {time.time() - start}")
+
+
+
+def get_closest_distance_to_camera(context, gp_obj, cam_obj):
+    cam_position = cam_obj.matrix_world.to_translation().xyz
+    real_min = 9999.0
+    for frame in range(context.scene.frame_start, context.scene.frame_end):
+        context.scene.frame_set(frame)
+        current_min = min([(gp_obj.matrix_world @ Vector(corner) - cam_position).length for corner in gp_obj.bound_box])
+        if current_min < real_min:
+            real_min = current_min
+
+    return real_min
 
 def instanciate_gp_from_dict(context, dict):
     target_collection = bpy.data.collections['Target']
@@ -204,6 +226,17 @@ class GP_OT_get_points_visible(Operator):
         default= True
     )
 
+    distance_to_camera : FloatProperty(
+        name = "Distance to Camera",
+        description =" Distance at which the object is flattened",
+        default=1.0
+    )
+
+    offset_distance : FloatProperty(
+        name="Offset from Geometry",
+        description = "Offset toward camera for flatten object ",
+        default = 0.1
+    )
 
     @classmethod
     def poll(cls, context):
@@ -218,17 +251,27 @@ class GP_OT_get_points_visible(Operator):
             return {'FINISHED'}
 
 
+        cam_obj = context.scene.camera
+        if gp_props.use_grease_pencil_object and gp_props.flattener_gp_object is not None: 
+            ob = gp_props.flattener_gp_object
+            distance = get_closest_distance_to_camera(context, gp_props.flattener_gp_object, cam_obj) - self.offset_distance
+        else:
+            distance = self.distance_to_camera
+
+        position = cam_obj.matrix_world @ Vector((0,0,-distance,1))
+        context.scene.cursor.location = position.xyz
+
         if gp_props.use_scene_keyframe:
             keyframes = find_keyframes(context)
 
         if gp_props.use_grease_pencil_object and gp_props.flattener_gp_object is not None: 
             context.view_layer.objects.active = gp_props.flattener_gp_object
             if self.bake_animation:
-                bpy.ops.gpencil.bake_grease_pencil_animation(step= gp_props.animation_step) #This will create a new object with baked animation
+                bpy.ops.gpencil.bake_grease_pencil_animation(step=gp_props.animation_step) #This will create a new object with baked animation
                 print('animation baking is done')
             else:
                 gp_obj = context.active_object.copy()
-                context.view_layer.objects.link(gp_obj)
+                context.collection.objects.link(gp_obj)
                 context.view_layer.objects.active = gp_obj
 
             gp_obj = context.active_object
@@ -247,7 +290,6 @@ class GP_OT_get_points_visible(Operator):
             line_art_obj.name = f"{gp_props.flattener_gp_line_art.name}_flattened"
             move_obj_to_collection(context, gp_props.target_collection, line_art_obj)
             objects_to_flatten.append(line_art_obj)
-
 
         if gp_props.use_mesh_collection:
             if context.space_data.region_3d.view_perspective != 'CAMERA':
@@ -284,13 +326,15 @@ class GP_OT_get_points_visible(Operator):
                     bpy.ops.object.mode_set(mode='OBJECT')
 
         if self.flatten_object:
-            #TODO Let the user choose the distance to camera for reprojection
             if context.space_data.region_3d.view_perspective != 'CAMERA':
                 bpy.ops.view3d.view_camera()
             bpy.ops.object.select_all(action='DESELECT')
+
             for obj in objects_to_flatten:
                 obj.select_set(True)
                 context.view_layer.objects.active = obj
+                #TODO change the reproject all frames operator
+
                 bpy.ops.gp.batch_reproject_all_frames()
 
         if gp_props.merge_flattened:
@@ -304,14 +348,19 @@ class GP_OT_get_points_visible(Operator):
 
         if gp_props.use_scene_keyframe:
             print(f'on detruiiiit {keyframes}')
-            for obj in gp_props.target_collection.objects:
-                for layer in obj.data.layers:
-                    for frame in layer.frames:
-                        if frame.frame_number not in keyframes:
-                            layer.frames.remove(frame)
+            if not keyframes:
+                print("Pas de keyframe, c'est pas possible, on arrete")
+            else: 
+                for obj in gp_props.target_collection.objects:
+                    for layer in obj.data.layers:
+                        for frame in reversed(layer.frames):
+                            if frame.frame_number not in keyframes:
+                                print(f'on remove la frame {frame.frame_number}')
+                                layer.frames.remove(frame)
 
 
         if self.hide_originals:
+            print('on cache')
             if gp_props.flattener_mesh_collection is not None: 
                 gp_props.flattener_mesh_collection.hide_viewport = True
             if gp_props.flattener_gp_object is not None:
