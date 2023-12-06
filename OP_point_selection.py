@@ -235,7 +235,7 @@ class GP_OT_get_points_visible(Operator):
     offset_distance : FloatProperty(
         name="Offset from Geometry",
         description = "Offset toward camera for flatten object ",
-        default = 0.1
+        default = 0.3
     )
 
     @classmethod
@@ -265,6 +265,9 @@ class GP_OT_get_points_visible(Operator):
             keyframes = find_keyframes(context)
 
         if gp_props.use_grease_pencil_object and gp_props.flattener_gp_object is not None: 
+
+            gp_props.flattener_gp_object.hide_viewport = False
+
             context.view_layer.objects.active = gp_props.flattener_gp_object
             if self.bake_animation:
                 bpy.ops.gpencil.bake_grease_pencil_animation(step=gp_props.animation_step) #This will create a new object with baked animation
@@ -335,7 +338,8 @@ class GP_OT_get_points_visible(Operator):
                 context.view_layer.objects.active = obj
                 #TODO change the reproject all frames operator
 
-                bpy.ops.gp.batch_reproject_all_frames()
+                bpy.ops.gp.batch_reproject_all_frames(type='VIEW')
+
 
         if gp_props.merge_flattened:
             bpy.ops.object.select_all(action='DESELECT')

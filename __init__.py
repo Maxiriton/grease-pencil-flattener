@@ -19,8 +19,8 @@
 bl_info = {
     "name": "Grease Pencil Flattener",
     "author": "Henri Hebeisen",
-    "version": (0, 1),
-    "blender": (3, 4, 0),
+    "version": (0, 2),
+    "blender": (3, 6, 1),
     "location": "3D View > Properties Region > View",
     "description": "Convert Your 3D Grease Pencil strokes to flat and  drawable strokes",
     "warning": "Hautement experimental !",
